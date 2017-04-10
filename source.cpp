@@ -1,46 +1,77 @@
+#include <algorithm>
+#include <functional>
 #include <iostream>
-#include <math.h>
-#define MU 1
-
-double* evolution_function(double t, double x, double v, double* value) // takes state(t,x,v) returns F(t,x,v) = {f(t,x,v), g(t,x,v)}
+#include <array>
+#include <iomanip> //for output formating
+#define MU 4 //defined by macros (stupid)
+#define time_limit 2 // same stupidity for time
+std::array<double,3> operator+(const std::array<double,3>& a, const std::array<double,3>& b) // overloaded sum
 {
-    value[0] = v;
-    value[1] = -x + MU * v * (1 - x * x);
+    std::array<double, 3> result;
+    std::array<double, 3>::iterator begin = result.begin();
+    *begin = *(std::begin(a)) + *(std::begin(b)); //dump but working
+    *(++begin) = *(std::begin(a) + 1) + *(std::begin(b) + 1);
+    *(++begin) = *(std::begin(a) + 2) + *(std::begin(b) + 2);
+    return result;
+}
+std::array<double,3> operator/(const std::array<double,3>& a, const double& b) // overloaded array * scalar
+{
+    std::array<double, 3> result;
+    std::array<double, 3>::iterator begin = result.begin();
+    *begin = *(std::begin(a)) / b;
+    *(++begin) = *(std::begin(a) + 1) / b;
+    *(++begin) = *(std::begin(a) + 2) / b;
+    return result;
+}
+std::array<double,3> operator*(const std::array<double,3>& a, const double& b) //same with division
+{
+    std::array<double, 3> result;
+    std::array<double, 3>::iterator begin = result.begin();
+    *begin = *(std::begin(a)) * b;
+    *(++begin) = *(std::begin(a) + 1) * b;
+    *(++begin) = *(std::begin(a) + 2) * b;
+    return result;
+}
+
+std::array<double,3> evolution_function(const std::array<double,3>&  state, const double& time_step) // takes state(t,x,v) returns F(t,x,v) = {t_step,f(t,x,v), g(t,x,v)}
+{
+    std::array<double,3> value;
+    value[0] = 1;
+    value[1] = state[2];
+    value[2] = -state[1] + MU * state[2] * (1 - state[1]*state[1]);
     return value;
 }
 
-double* rk_coefs(double* state, double t_step, double* coef)
+std::array<double,3> rk_coefs(std::array<double,3> state, double t_step)
 {
-    double* temp;
-    temp = evolution_function(state[0], state[1], state[2], temp); // Temp now contain k_0, l_0
-    coef[0] = temp[0];
-    coef[1] = temp[1]; // Coef cotain k_0, l_0
-    temp = evolution_function(state[0] + t_step/2, state[1] + temp[0]/2, state[2] + temp[1]/2, temp); // k_1, l_1
-    coef[0] += 2*temp[0];
-    coef[1] += 2*temp[1];// k_0 + 2k_1;
-    temp = evolution_function(state[0] + t_step/2, state[1] + temp[0]/2, state[2] + temp[1]/2, temp); // k_2, l_2
-    coef[0] += 2*temp[0];
-    coef[1] += 2*temp[1];// k_0 + 2k_1 + 2k_2;
-    temp = evolution_function(state[0] + t_step, state[1] + temp[0], state[2] + temp[1], temp); //k_1, l_3
-    coef[0] += temp[0];
-    coef[1] += temp[1];
-    coef[0] = coef[0] * t_step / 6;
-    coef[1] = coef[1] * t_step / 6;
+    std::array<double,3> coef = evolution_function(state, t_step) * t_step; //{time_step, k_0, l_0}
+    std::array<double,3> temp_state = state;
+    std::array<double,3> temp_evolution = {0,0,0};
+    temp_state = temp_state + coef / 2;
+    temp_evolution = evolution_function(temp_state, t_step) * t_step;
+    temp_state = temp_state + temp_evolution/2;
+    coef = coef + temp_evolution * 2;
+    temp_state = temp_state + coef / 2;
+    temp_evolution = evolution_function(temp_state, t_step) * t_step;
+    temp_state = temp_state + temp_evolution/2;
+    coef = coef + temp_evolution * 2;
+    temp_state = temp_state + coef;
+    coef = coef + evolution_function(temp_state, t_step) * t_step;
+    coef = coef/ 6; //returning not exactly RK coefs, but sum of them devided by 6. {6*t_step, sum of k, sum of l}/6
     return coef;
 }
 
 int main()
 {
-    double coef[2] = {0, 0}; // initial values of RK coefs
-    double state[3] = {0, 0, 1}; // initial values for Cauchy problem
+    std::array<double,3> coef = {0,0,0}; //initial RK coefs
+    std::array<double,3> state = {0,0,2}; //initial values for Cauchy problem
     double t_step = 0.01; // time step
-    while (state[0] < 1)
+    std::cout << std::setw(15) << "Time" << std::setw(15) << "Coordinate" << std::setw(15) << "Speed" << std::endl;
+    while (state[0] < time_limit) // Evaluate untill time_limit
     {
-        //double* temp = rk_coefs(state, t_step, coef);
-        //state[0] += t_step;
-        //state[1] += *temp;
-        //state[2] += *(temp+1);
-        std::cout << &coef << &state << std::endl;
+        coef = rk_coefs(state, t_step);
+        state = state + coef;
+        std::cout << std::setw(15) << state[0] << std::setw(15) << state[1] << std::setw(15) <<state[2] << std::endl; //out to std, move by > operator
     }
 	return 0;
 }
