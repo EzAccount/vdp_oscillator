@@ -71,7 +71,8 @@ int main()
     {
         coef = rk_coefs(state, t_step);
         state = state + coef;
-        std::cout << std::setw(15) << state[0] << std::setw(15) << state[1] << std::setw(15) <<state[2] << std::endl; //out to std, move by > operator
+        std::cout << std::fixed;
+        std::cout << std::setw(15) <<std::setprecision(2) << state[0] << std::setw(15)<<std::setprecision(5) << state[1] << std::setw(15)<<std::setprecision(5) <<state[2] << std::endl; //out to std, move by > operator
     }
 	return 0;
 }
